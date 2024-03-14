@@ -8,7 +8,7 @@ const max_court = 6; // 场地数目
 
 let court_num = target_court;
 if (target_court === '-1') {
-    const random_court = Math.floor(Math.random() * max_court);
+    const random_court = Math.floor(Math.random() * max_court) + 1;
     court_num = random_court.toString();
 }
 const court_selector = 'span#seat_' + court_num + '.cell.' + sport;
@@ -153,7 +153,23 @@ async function identify() {
 
 async function book(browser) {
     const page = await browser.newPage();
-    await page.goto(cgyy_url);
+    while (true) {
+        await page.goto(cgyy_url);
+        await delay(300);
+        const subhead = await page.$('body > div > div.subheader');
+        const subhead_text = await page.evaluate(e => e.innerText, subhead);
+        console.log("subhead_text is ", subhead_text);
+        if (subhead_text !== "请到8:40-21:40再来预订！")
+            break;
+        const am84001 = new Date();
+        am84001.setHours(8);
+        am84001.setMinutes(40);
+        am84001.setSeconds(1);
+        am84001.setMilliseconds(500);
+        if (new Date() >= am84001) {
+            break;
+        }
+    }
     await select_court(page);
 
     await page.waitForSelector('button#reserve.button-large.button-info');
