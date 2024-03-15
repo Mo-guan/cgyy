@@ -16,6 +16,7 @@ const login_url = 'http://202.117.17.144/order/myorders.html';
 
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const http = require('http');
 
 let now = new Date();
 let twoDaysLater = new Date(now.setDate(now.getDate() + 2));
@@ -60,16 +61,13 @@ function delay(time) {
     });
 }
 
-async function wait_time(time) {
-    let now = new Date();
-    let d = time - now;
-    // if (d>5000) {
-    //     await delay(d-5000);
-    // }
-    while (new Date() < time) {
-        await delay(100);
-    }
-}
+// async function wait_time(time) {
+//     let now = new Date();
+//     let d = time - now;
+//     while (new Date() < time) {
+//         await delay(100);
+//     }
+// }
 
 
 async function select_court(page) {
@@ -153,23 +151,8 @@ async function identify() {
 
 async function book(browser) {
     const page = await browser.newPage();
-    while (true) {
-        await page.goto(cgyy_url);
-        await delay(300);
-        const subhead = await page.$('body > div > div.subheader');
-        const subhead_text = await page.evaluate(e => e.innerText, subhead);
-        console.log("subhead_text is ", subhead_text);
-        if (subhead_text !== "请到8:40-21:40再来预订！")
-            break;
-        const am84001 = new Date();
-        am84001.setHours(8);
-        am84001.setMinutes(40);
-        am84001.setSeconds(1);
-        am84001.setMilliseconds(500);
-        if (new Date() >= am84001) {
-            break;
-        }
-    }
+    await page.goto(cgyy_url);
+
     await select_court(page);
 
     await page.waitForSelector('button#reserve.button-large.button-info');
@@ -224,6 +207,40 @@ async function book(browser) {
     await page.screenshot({ path: 'res.png' });
 }
 
+async function checkTime() {
+    while (true) {
+        try {
+            const res = await new Promise((resolve, reject) => {
+                http.get('http://worldtimeapi.org/api/timezone/Asia/Shanghai', (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                    });
+                    res.on('end', () => {
+                        resolve(data);
+                    });
+                }).on('error', (err) => {
+                    reject(err);
+                });
+            });
+
+            const timeData = JSON.parse(res);
+            const datetime = new Date(timeData.datetime);
+            const hour = datetime.getHours();
+            const minute = datetime.getMinutes();
+
+            // 判断是否到达早上 8:40
+            if (hour < 8 || (hour === 8 && minute < 40)) {
+                await delay(200);
+            } else {
+                console.log('已到达早上 8:40');
+                break;
+            }
+        } catch (err) {
+            console.log('Error:', err.message);
+        }
+    }
+}
 
 (async () => {
     console.log("cgyy_url is ", cgyy_url);
@@ -247,12 +264,7 @@ async function book(browser) {
 
     await delay(5000);
 
-    const am840 = new Date();
-    am840.setHours(8);
-    am840.setMinutes(40);
-    am840.setSeconds(1);
-    am840.setMilliseconds(0);
-    await wait_time(am840);
+    await checkTime();
 
     await book(browser);
 
