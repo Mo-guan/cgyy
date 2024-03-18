@@ -102,7 +102,7 @@ async function select_court(page) {
 
     // select time
     await page.waitForSelector('a.textbox-icon.combo-arrow');
-    console.log("date select found");
+    console.log("time select found");
     const selectEle = await page.$$('a.textbox-icon.combo-arrow');
     for (const ele of selectEle) {
         const offsetWidth = await page.evaluate(e => { return e.offsetWidth }, ele);
@@ -208,6 +208,11 @@ async function book(browser) {
 }
 
 async function checkTime() {
+    const am840 = new Date();
+    am840.setHours(8);
+    am840.setMinutes(40);
+    am840.setSeconds(1);
+    am840.setMilliseconds(0);
     while (true) {
         try {
             const res = await new Promise((resolve, reject) => {
@@ -226,12 +231,10 @@ async function checkTime() {
 
             const timeData = JSON.parse(res);
             const datetime = new Date(timeData.datetime);
-            const hour = datetime.getHours();
-            const minute = datetime.getMinutes();
 
             // 判断是否到达早上 8:40
-            if (hour < 8 || (hour === 8 && minute < 40)) {
-                await delay(200);
+            if (datetime < am840) {
+                await delay(50);
             } else {
                 console.log('已到达早上 8:40');
                 break;
@@ -250,7 +253,8 @@ async function checkTime() {
         headless: false,
         args: [
             '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process'
+            '--disable-features=IsolateOrigins,site-per-process',
+            `--window-size=${1920},${1080}`
         ],
         // slowMo: 1,
         defaultViewport: { width: 1920, height: 1080 }
